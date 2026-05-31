@@ -1,0 +1,16 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# User data and generated output — not part of the repo
+personnel.xlsx
+personnel.xlsx.bck
+result/
+result(*/
