@@ -66,6 +66,14 @@ def create_workbook():
         style_header(ws.cell(row=2, column=col, value=header))
         ws.column_dimensions[get_column_letter(col)].width = COLUMN_WIDTH
 
+    # --- Classrooms table (Z–AA, gap at col Y) ---
+    ws["Z1"] = "Classrooms"
+    ws["Z1"].font = Font(bold=True, size=13)
+
+    for col, header in enumerate(["Full Commander Name", "Class Name"], start=26):
+        style_header(ws.cell(row=2, column=col, value=header))
+        ws.column_dimensions[get_column_letter(col)].width = COLUMN_WIDTH
+
     _style = TableStyleInfo(name="TableStyleMedium9", showRowStripes=True, showFirstColumn=False, showLastColumn=False, showColumnStripes=False)
     for name, ref in [
         ("Soldiers",      "A2:F2"),
@@ -74,6 +82,7 @@ def create_workbook():
         ("Courses",       "P2:Q2"),
         ("Rooms",         "S2:U2"),
         ("ComputerUsers", "W2:X2"),
+        ("Classrooms",    "Z2:AA2"),
     ]:
         tab = Table(displayName=name, ref=ref)
         tab.tableStyleInfo = _style

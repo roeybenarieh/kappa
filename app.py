@@ -123,6 +123,18 @@ class ComputerUser(BaseModel):
         return v.strip()
 
 
+class Classroom(BaseModel):
+    commander_name: str
+    class_name: str
+
+    @field_validator("commander_name", "class_name")
+    @classmethod
+    def must_not_be_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("field must not be empty")
+        return v.strip()
+
+
 # ---------------------------------------------------------------------------
 # Excel reading
 # ---------------------------------------------------------------------------
@@ -168,10 +180,13 @@ def read_excel():
     computer_users, computer_user_errors = read_rows(
         23, 24, ["username", "password"], ComputerUser
     )
+    classrooms, classroom_errors = read_rows(
+        26, 27, ["commander_name", "class_name"], Classroom
+    )
 
     all_errors = (
         soldier_errors + commander_errors + hitnasut_errors
-        + course_errors + room_errors + computer_user_errors
+        + course_errors + room_errors + computer_user_errors + classroom_errors
     )
     if all_errors:
         lines = []
@@ -182,7 +197,7 @@ def read_excel():
                 lines.append(f"Row {row_num}, col {col}: {msg}")
         raise ValueError("Validation errors in personnel.xlsx:\n" + "\n".join(lines))
 
-    return soldiers, commanders, hitnasuyot, courses, rooms, computer_users
+    return soldiers, commanders, hitnasuyot, courses, rooms, computer_users, classrooms
 
 
 # ---------------------------------------------------------------------------
@@ -342,7 +357,8 @@ def _assign_commanders(soldiers: list, commanders: list, courses: list) -> dict:
 
 
 def _validate_cross_references(
-    soldiers: list, commanders: list, hitnasuyot: list, courses: list, computer_users: list
+    soldiers: list, commanders: list, hitnasuyot: list, courses: list, computer_users: list,
+    classrooms: list,
 ) -> dict[str, list[str]]:
     """Returns an ordered dict of {section_heading: [error_lines]}, empty if all OK."""
     sections: dict[str, list[str]] = {}
@@ -442,6 +458,17 @@ def _validate_cross_references(
             f"Row {s['_row']}, cols A–B  (no computer user entry for this soldier)"
             for s in missing
         ]
+
+    # Classrooms: commander full name must exist in the Commanders table
+    classroom_cmd_errors = []
+    for cl in classrooms:
+        cname = cl["commander_name"].strip()
+        if cname.lower() not in commander_fullnames:
+            classroom_cmd_errors.append(
+                f"Row {cl['_row']}, col Z  (Full Commander Name — not found in Commanders table)"
+            )
+    if classroom_cmd_errors:
+        sections["Classrooms with unknown commander"] = classroom_cmd_errors
 
     return sections
 
@@ -1093,8 +1120,8 @@ def refresh_status():
     error_sections: dict[str, list[str]] = {}
 
     try:
-        soldiers, commanders, hitnasuyot, courses, rooms, computer_users = read_excel()
-        error_sections = _validate_cross_references(soldiers, commanders, hitnasuyot, courses, computer_users)
+        soldiers, commanders, hitnasuyot, courses, rooms, computer_users, classrooms = read_excel()
+        error_sections = _validate_cross_references(soldiers, commanders, hitnasuyot, courses, computer_users, classrooms)
         room_errors = _check_room_capacity(soldiers, rooms)
         if room_errors:
             error_sections["Soldiers without a room"] = room_errors
@@ -1166,12 +1193,12 @@ def btn_generate_all():
         return
 
     try:
-        soldiers, commanders, hitnasuyot, courses, rooms, computer_users = read_excel()
+        soldiers, commanders, hitnasuyot, courses, rooms, computer_users, classrooms = read_excel()
     except ValueError:
         messagebox.showerror("Errors", "There are errors that need to be fixed before generating.")
         return
 
-    cross_errors = _validate_cross_references(soldiers, commanders, hitnasuyot, courses, computer_users)
+    cross_errors = _validate_cross_references(soldiers, commanders, hitnasuyot, courses, computer_users, classrooms)
     if cross_errors:
         messagebox.showerror("Errors", "There are errors that need to be fixed before generating.")
         return
