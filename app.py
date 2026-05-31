@@ -518,6 +518,12 @@ def _validate_templates() -> tuple[list[str], list[str]]:
             {"<soldier name>"},
             {"<soldier name>"},
         ),
+        (
+            CLASSROOM_TEMPLATE,
+            _placeholders_pptx,
+            {"<commander name>", "<classroom name>"},
+            {"<commander name>", "<classroom name>"},
+        ),
     ]
 
     for path, scanner, required, recognized in checks:
@@ -727,6 +733,31 @@ def _generate_pptx(hitnasuyot: list, out_dir: Path) -> str:
         sldIdLst.remove(sldIdLst[0])
 
     out = out_dir / "hitnasuyot.pptx"
+    prs.save(str(out))
+    return str(out)
+
+
+# ---------------------------------------------------------------------------
+# Classroom PPTX (template-based)
+# ---------------------------------------------------------------------------
+
+CLASSROOM_TEMPLATE = Path("templates/classroom.pptx")
+
+
+def _generate_classroom_pptx(classrooms: list, out_dir: Path) -> str:
+    prs = Presentation(str(CLASSROOM_TEMPLATE))
+    tmpl_slide = prs.slides[0]
+
+    for cl in classrooms:
+        slide = _copy_slide(prs, tmpl_slide)
+        _replace_text(slide, {
+            "<commander name>": cl["commander_name"],
+            "<classroom name>": cl["class_name"],
+        })
+
+    prs.slides._sldIdLst.remove(prs.slides._sldIdLst[0])
+
+    out = out_dir / "classroom.pptx"
     prs.save(str(out))
     return str(out)
 
@@ -1171,7 +1202,7 @@ def btn_generate_all():
     missing = []
     if not Path(EXCEL_PATH).exists():
         missing.append(f"• {EXCEL_PATH}")
-    for tmpl in (HITNASUYOT_TEMPLATE, ROOM_SIGNS_TEMPLATE, NAME_TAGS_TEMPLATE):
+    for tmpl in (HITNASUYOT_TEMPLATE, ROOM_SIGNS_TEMPLATE, NAME_TAGS_TEMPLATE, CLASSROOM_TEMPLATE):
         if not tmpl.exists():
             missing.append(f"• {tmpl}")
     if missing:
@@ -1247,6 +1278,12 @@ def btn_generate_all():
             generated.append(_generate_name_tags(soldiers, out_dir))
         except Exception as e:
             errors.append(f"Name tags: {e}")
+
+    if classrooms:
+        try:
+            generated.append(_generate_classroom_pptx(classrooms, out_dir))
+        except Exception as e:
+            errors.append(f"Classroom presentation: {e}")
 
     if generated:
         msg = f"Results saved to '{out_dir}'."
