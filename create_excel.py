@@ -50,27 +50,27 @@ def create_workbook():
         style_header(ws.cell(row=2, column=col, value=header))
         ws.column_dimensions[get_column_letter(col)].width = COLUMN_WIDTH
 
-    # --- Rooms table (S–U, gap at col R) ---
+    # --- Rooms table (S–V, gap at col R) ---
     ws["S1"] = "Rooms"
     ws["S1"].font = Font(bold=True, size=13)
 
-    for col, header in enumerate(["Room Number", "Gender", "Capacity"], start=19):
+    for col, header in enumerate(["Room Number", "Gender", "Capacity", "Room Manager"], start=19):
         style_header(ws.cell(row=2, column=col, value=header))
         ws.column_dimensions[get_column_letter(col)].width = COLUMN_WIDTH
 
-    # --- Computer Users table (W–X, gap at col V) ---
-    ws["W1"] = "Computer Users"
-    ws["W1"].font = Font(bold=True, size=13)
+    # --- Computer Users table (X–Y, gap at col W) ---
+    ws["X1"] = "Computer Users"
+    ws["X1"].font = Font(bold=True, size=13)
 
-    for col, header in enumerate(["Username", "Password"], start=23):
+    for col, header in enumerate(["Username", "Password"], start=24):
         style_header(ws.cell(row=2, column=col, value=header))
         ws.column_dimensions[get_column_letter(col)].width = COLUMN_WIDTH
 
-    # --- Classrooms table (Z–AA, gap at col Y) ---
-    ws["Z1"] = "Classrooms"
-    ws["Z1"].font = Font(bold=True, size=13)
+    # --- Classrooms table (AA–AB, gap at col Z) ---
+    ws["AA1"] = "Classrooms"
+    ws["AA1"].font = Font(bold=True, size=13)
 
-    for col, header in enumerate(["Full Commander Name", "Class Name"], start=26):
+    for col, header in enumerate(["Full Commander Name", "Class Name"], start=27):
         style_header(ws.cell(row=2, column=col, value=header))
         ws.column_dimensions[get_column_letter(col)].width = COLUMN_WIDTH
 
@@ -80,9 +80,9 @@ def create_workbook():
         ("Commanders",    "H2:J2"),
         ("Hitnasuyot",    "L2:N2"),
         ("Courses",       "P2:Q2"),
-        ("Rooms",         "S2:U2"),
-        ("ComputerUsers", "W2:X2"),
-        ("Classrooms",    "Z2:AA2"),
+        ("Rooms",         "S2:V2"),
+        ("ComputerUsers", "X2:Y2"),
+        ("Classrooms",    "AA2:AB2"),
     ]:
         tab = Table(displayName=name, ref=ref)
         tab.tableStyleInfo = _style

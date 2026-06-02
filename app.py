@@ -90,6 +90,7 @@ class Room(BaseModel):
     room_number: str
     gender: str
     capacity: str
+    room_manager: Optional[str] = ""
 
     @field_validator("room_number", "gender", "capacity")
     @classmethod
@@ -175,13 +176,13 @@ def read_excel():
         16, 17, ["course", "half_kappa"], Course
     )
     rooms, room_errors = read_rows(
-        19, 21, ["room_number", "gender", "capacity"], Room
+        19, 22, ["room_number", "gender", "capacity", "room_manager"], Room
     )
     computer_users, computer_user_errors = read_rows(
-        23, 24, ["username", "password"], ComputerUser
+        24, 25, ["username", "password"], ComputerUser
     )
     classrooms, classroom_errors = read_rows(
-        26, 27, ["commander_name", "class_name"], Classroom
+        27, 28, ["commander_name", "class_name"], Classroom
     )
 
     all_errors = (
@@ -358,7 +359,7 @@ def _assign_commanders(soldiers: list, commanders: list, courses: list) -> dict:
 
 def _validate_cross_references(
     soldiers: list, commanders: list, hitnasuyot: list, courses: list, computer_users: list,
-    classrooms: list,
+    classrooms: list, rooms: list,
 ) -> dict[str, list[str]]:
     """Returns an ordered dict of {section_heading: [error_lines]}, empty if all OK."""
     sections: dict[str, list[str]] = {}
@@ -465,10 +466,21 @@ def _validate_cross_references(
         cname = cl["commander_name"].strip()
         if cname.lower() not in commander_fullnames:
             classroom_cmd_errors.append(
-                f"Row {cl['_row']}, col Z  (Full Commander Name — not found in Commanders table)"
+                f"Row {cl['_row']}, col AA  (Full Commander Name — not found in Commanders table)"
             )
     if classroom_cmd_errors:
         sections["Classrooms with unknown commander"] = classroom_cmd_errors
+
+    # Rooms: room manager must exist in the Soldiers table
+    room_manager_errors = []
+    for r in rooms:
+        mgr = (r.get("room_manager") or "").strip()
+        if mgr and mgr.lower() not in soldier_fullnames:
+            room_manager_errors.append(
+                f"Row {r['_row']}, col V  (Room Manager — not found in Soldiers table)"
+            )
+    if room_manager_errors:
+        sections["Rooms with unknown room manager"] = room_manager_errors
 
     return sections
 
@@ -988,6 +1000,7 @@ def _generate_data_xlsx(
     room_assignment: dict,
     commander_assignment: dict,
     computer_users: list,
+    rooms: list,
     out_dir: Path,
 ) -> str:
     course_to_half_kappa = {c["course"].strip().lower(): c["half_kappa"] for c in courses}
@@ -1001,17 +1014,19 @@ def _generate_data_xlsx(
         for s in occupants:
             soldier_to_room[s["personal_number"]] = room_num
 
+    room_to_manager: dict[str, str] = {r["room_number"]: (r.get("room_manager") or "") for r in rooms}
+
     headers = [
         "Soldier Number",
         "Name", "Last Name", "Personal Number", "Phone", "Course", "Gender",
-        "Half Kappa", "Hitnasut", "Commander", "Room Number",
+        "Half Kappa", "Hitnasut", "Commander", "Room Number", "Room Manager",
         "Rank", "Unit", "Date of Birth", "City",
         "Username", "Password",
     ]
     fields = [
         "soldier_number",
         "name", "last_name", "personal_number", "phone", "course", "gender",
-        "half_kappa", "hitnasut_name", "commander_name", "room_number",
+        "half_kappa", "hitnasut_name", "commander_name", "room_number", "room_manager",
         "rank", "unit", "date_of_birth", "city",
         "username", "password",
     ]
@@ -1044,6 +1059,7 @@ def _generate_data_xlsx(
             "hitnasut_name": hitnasut.get("hitnasut_name", ""),
             "commander_name": commander_name,
             "room_number": soldier_to_room.get(s["personal_number"], ""),
+            "room_manager": room_to_manager.get(soldier_to_room.get(s["personal_number"], ""), ""),
             **api,
             "username": cu.get("username", ""),
             "password": cu.get("password", ""),
@@ -1152,7 +1168,7 @@ def refresh_status():
 
     try:
         soldiers, commanders, hitnasuyot, courses, rooms, computer_users, classrooms = read_excel()
-        error_sections = _validate_cross_references(soldiers, commanders, hitnasuyot, courses, computer_users, classrooms)
+        error_sections = _validate_cross_references(soldiers, commanders, hitnasuyot, courses, computer_users, classrooms, rooms)
         room_errors = _check_room_capacity(soldiers, rooms)
         if room_errors:
             error_sections["Soldiers without a room"] = room_errors
@@ -1229,7 +1245,7 @@ def btn_generate_all():
         messagebox.showerror("Errors", "There are errors that need to be fixed before generating.")
         return
 
-    cross_errors = _validate_cross_references(soldiers, commanders, hitnasuyot, courses, computer_users, classrooms)
+    cross_errors = _validate_cross_references(soldiers, commanders, hitnasuyot, courses, computer_users, classrooms, rooms)
     if cross_errors:
         messagebox.showerror("Errors", "There are errors that need to be fixed before generating.")
         return
@@ -1250,7 +1266,7 @@ def btn_generate_all():
     if soldiers:
         try:
             generated.append(
-                _generate_data_xlsx(soldiers, hitnasuyot, courses, room_assignment, commander_assignment, computer_users, out_dir)
+                _generate_data_xlsx(soldiers, hitnasuyot, courses, room_assignment, commander_assignment, computer_users, rooms, out_dir)
             )
         except Exception as e:
             errors.append(f"Data: {e}")
@@ -1440,16 +1456,19 @@ HELP_TEXT = """\
                   Commanders table so that soldiers and commanders
                   can be matched.
 
- TABLE 5 — ROOMS  (columns S–U)
+ TABLE 5 — ROOMS  (columns S–V)
    One row per room.
-   • Room Number — room identifier, e.g. "101" or "A2".
-                   Must be unique (no two rows with the same
-                   room number).
-   • Gender      — which gender this room is for. Must exactly
-                   match what soldiers have in their Gender column
-                   (e.g. "male" / "female").
-   • Capacity    — maximum number of soldiers in this room.
-                   Must be a whole number greater than zero.
+   • Room Number  — room identifier, e.g. "101" or "A2".
+                    Must be unique (no two rows with the same
+                    room number).
+   • Gender       — which gender this room is for. Must exactly
+                    match what soldiers have in their Gender column
+                    (e.g. "male" / "female").
+   • Capacity     — maximum number of soldiers in this room.
+                    Must be a whole number greater than zero.
+   • Room Manager — optional. If filled, must be written as
+                    "First Last" and match exactly a soldier in
+                    the Soldiers table. Appears in data.xlsx.
 
    HOW ROOM ASSIGNMENT WORKS:
 
@@ -1470,7 +1489,7 @@ HELP_TEXT = """\
      Constraint — Capacity.
        No room exceeds its stated capacity.
 
- TABLE 6 — COMPUTER USERS  (columns W–X)
+ TABLE 6 — COMPUTER USERS  (columns X–Y)
    One row per computer account, in the same order as the
    Soldiers table (row 1 here corresponds to soldier row 1, etc.).
    • Username — the computer account username  (required)
@@ -1582,6 +1601,11 @@ HELP_TEXT = """\
        table. Each soldier must have a corresponding computer user
        at the same row position. Add the missing rows to the
        Computer Users table.
+
+   • "Rooms with unknown room manager"  (row X, col V)
+       The Room Manager name does not match any soldier's
+       "First Last" name. Check spelling and spacing exactly,
+       or leave the cell blank if there is no room manager.
 
  ── AFTER CLICKING GENERATE ────────────────────────────────────
 
