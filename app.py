@@ -536,6 +536,12 @@ def _validate_templates() -> tuple[list[str], list[str]]:
             {"<commander name>", "<classroom name>"},
             {"<commander name>", "<classroom name>"},
         ),
+        (
+            CERTIFICATE_TEMPLATE,
+            _placeholders_pptx,
+            {"<soldier name>"},
+            {"<soldier name>"},
+        ),
     ]
 
     for path, scanner, required, recognized in checks:
@@ -770,6 +776,28 @@ def _generate_classroom_pptx(classrooms: list, out_dir: Path) -> str:
     prs.slides._sldIdLst.remove(prs.slides._sldIdLst[0])
 
     out = out_dir / "classroom.pptx"
+    prs.save(str(out))
+    return str(out)
+
+
+# ---------------------------------------------------------------------------
+# Certificates PPTX (template-based)
+# ---------------------------------------------------------------------------
+
+CERTIFICATE_TEMPLATE = Path("templates/certificate.pptx")
+
+
+def _generate_certificates(soldiers: list, out_dir: Path) -> str:
+    prs = Presentation(str(CERTIFICATE_TEMPLATE))
+    tmpl_slide = prs.slides[0]
+
+    for s in soldiers:
+        slide = _copy_slide(prs, tmpl_slide)
+        _replace_text(slide, {"<Soldier name>": f"{s['name']} {s['last_name']}".strip()})
+
+    prs.slides._sldIdLst.remove(prs.slides._sldIdLst[0])
+
+    out = out_dir / "certificates.pptx"
     prs.save(str(out))
     return str(out)
 
@@ -1218,7 +1246,7 @@ def btn_generate_all():
     missing = []
     if not Path(EXCEL_PATH).exists():
         missing.append(f"• {EXCEL_PATH}")
-    for tmpl in (HITNASUYOT_TEMPLATE, ROOM_SIGNS_TEMPLATE, NAME_TAGS_TEMPLATE, CLASSROOM_TEMPLATE):
+    for tmpl in (HITNASUYOT_TEMPLATE, ROOM_SIGNS_TEMPLATE, NAME_TAGS_TEMPLATE, CLASSROOM_TEMPLATE, CERTIFICATE_TEMPLATE):
         if not tmpl.exists():
             missing.append(f"• {tmpl}")
     if missing:
@@ -1300,6 +1328,12 @@ def btn_generate_all():
             generated.append(_generate_classroom_pptx(classrooms, out_dir))
         except Exception as e:
             errors.append(f"Classroom presentation: {e}")
+
+    if soldiers:
+        try:
+            generated.append(_generate_certificates(soldiers, out_dir))
+        except Exception as e:
+            errors.append(f"Certificates: {e}")
 
     if generated:
         msg = f"Results saved to '{out_dir}'."
