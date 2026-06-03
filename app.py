@@ -1364,7 +1364,6 @@ generate_btn = tk.Button(
     bg="#888888", activeforeground="white",
 )
 generate_btn.pack(side=tk.LEFT, padx=(0, 6))
-ttk.Button(btn_row, text="Get Template", command=btn_get_template, width=14).pack(side=tk.LEFT)
 
 errors_frame = ttk.Frame(main_tab)
 errors_frame.pack(anchor="w", pady=(10, 0), fill="x")
@@ -1695,6 +1694,8 @@ txt.insert("1.0", HELP_TEXT)
 txt.config(state="disabled")
 txt.pack(side="left", fill="both", expand=True)
 _scrollbar.config(command=txt.yview)
+
+ttk.Button(help_tab, text="Get Template", command=btn_get_template, width=16).pack(pady=(12, 0))
 
 root.update_idletasks()
 _init_w = root.winfo_reqwidth()
