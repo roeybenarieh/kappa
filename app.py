@@ -364,6 +364,20 @@ def _validate_cross_references(
     """Returns an ordered dict of {section_heading: [error_lines]}, empty if all OK."""
     sections: dict[str, list[str]] = {}
 
+    # Required tables must not be empty
+    empty = []
+    if not soldiers:
+        empty.append("Soldiers table is empty")
+    if not commanders:
+        empty.append("Commanders table is empty")
+    if not courses:
+        empty.append("Courses table is empty")
+    if not rooms:
+        empty.append("Rooms table is empty")
+    if empty:
+        sections["Empty required tables"] = empty
+        return sections
+
     course_names = {c["course"].strip().lower() for c in courses}
     soldier_fullnames = {
         f"{s['name']} {s['last_name']}".strip().lower() for s in soldiers
